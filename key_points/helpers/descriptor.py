@@ -56,7 +56,7 @@ def compute_descriptors(I, corners):
 
 
 
-def compute_matches(D1, D2):
+def compute_matches(D1, D2, T = 1.0):
     """
     Computes matches for two images using the descriptors.
     Uses the Lowe's criterea to determine the best match.
@@ -74,8 +74,8 @@ def compute_matches(D1, D2):
         [cornerIdx1, cornerIdx2] each row contains indices of corresponding keypoints 
     """
     M = []
-    T = 0.8
     dist = np.linalg.norm(D1[:, None, :] - D2[None, ...], axis=-1)
+
     for id1, d in enumerate(dist):
         idx = np.argpartition(d, 2, axis=-1)
         q_1 = d[idx[0]]
@@ -84,7 +84,6 @@ def compute_matches(D1, D2):
         if q_1/q_2 > 0.5 or q_1 > T:
             continue
         M.append([id1, idx[0]])
-
 
 
     return np.asarray(M)

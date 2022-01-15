@@ -9,8 +9,10 @@ import matplotlib.pyplot as plt
 
 from helpers.corner_detector  import compute_corners
 from helpers.descriptor import compute_descriptors, compute_matches
+from helpers.compute_homography import compute_homography_ransac
 from PIL import Image
 import imageio
+
 def plot_matches(I1, I2, C1, C2, M):
     """ 
     Plots the matches between the two images
@@ -36,6 +38,7 @@ if __name__ == "__main__":
     T_harris = 245
     T_shi_tomasi = 107
     image_1 = np.asarray(Image.open("mountain_1.jpg"))
+    width, height, _ = image_1.shape
     image_2 = np.asarray(Image.open("mountain_2.jpg"))
     I1_gray = cv2.cvtColor(image_1, cv2.COLOR_RGB2GRAY)
     I2_gray = cv2.cvtColor(image_2, cv2.COLOR_RGB2GRAY)
@@ -62,9 +65,6 @@ if __name__ == "__main__":
 
     # Matches for Shi-Tomasi keypoints and corresponding keypoints
     M_shi_tomasi = compute_matches(D1_shi_tomasi, D2_shi_tomasi)
-    print(f"M_harris {M_harris.shape}, M_shi_tomasi {M_shi_tomasi.shape}")
-
-
     C1_harris_transpose = np.zeros_like(C1_harris)
     C1_harris_transpose[:, 0], C1_harris_transpose[:, 1] = C1_harris[:, 1], C1_harris[:, 0]
 
@@ -77,10 +77,23 @@ if __name__ == "__main__":
 
     C2_shi_tomasi_transpose = np.zeros_like(C2_shi_tomasi)
     C2_shi_tomasi_transpose[:, 0], C2_shi_tomasi_transpose[:, 1] = C2_shi_tomasi[:, 1], C2_shi_tomasi[:, 0]
-    # Visualize the matches
-    plt.figure()
-    plot_matches(I1_gray, I2_gray, C1_harris_transpose, C2_harris_transpose, M_harris)
 
-    plt.figure()
-    plot_matches(I1_gray, I2_gray, C1_shi_tomasi_transpose, C2_shi_tomasi_transpose, M_shi_tomasi)
-    plt.show()
+    H, M = compute_homography_ransac(C1_shi_tomasi_transpose, C2_shi_tomasi_transpose, M_shi_tomasi)
+
+    im1Reg = cv2.warpPerspective(image_1, H, (height, width))
+    im1Reg[..., 0] = np.where(im1Reg[..., 0] == 0.0, image_2[..., 0], im1Reg[..., 0]) 
+    im1Reg[..., 1] = np.where(im1Reg[..., 1] == 0.0, image_2[..., 1], im1Reg[..., 1]) 
+    im1Reg[..., 2] = np.where(im1Reg[..., 2] == 0.0, image_2[..., 2], im1Reg[..., 2]) 
+
+    img= Image.fromarray(im1Reg.astype("uint8"))
+    img.save("mountain_stiched_crop_shi_tomasi.jpg")
+    H, M = compute_homography_ransac(C1_harris_transpose, C2_harris_transpose, M_harris)
+
+    im1Reg = cv2.warpPerspective(image_1, H, (height, width))
+    im1Reg[..., 0] = np.where(im1Reg[..., 0] == 0.0, image_2[..., 0], im1Reg[..., 0]) 
+    im1Reg[..., 1] = np.where(im1Reg[..., 1] == 0.0, image_2[..., 1], im1Reg[..., 1]) 
+    im1Reg[..., 2] = np.where(im1Reg[..., 2] == 0.0, image_2[..., 2], im1Reg[..., 2]) 
+
+    img= Image.fromarray(im1Reg.astype("uint8"))
+    img.save("mountain_stiched_crop_harris.jpg")
+
